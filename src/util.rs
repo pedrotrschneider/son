@@ -1,0 +1,1 @@
+pub fn discard<T>(_x: T) {}
