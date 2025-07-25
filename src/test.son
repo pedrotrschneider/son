@@ -1,22 +1,25 @@
-first_name: "John",
-last_name: "Smith",
-age: -25,
-is_alive: true,
-is_retired: false,
-initial: 'j',
-address: {
-    street_address: "21 2nd Street",
-    city: "New York",
-    state: "NY",
-    postal_code: "10021",
+{
+    first_name: "John",
+    last_name: "Smith",
+    age: -25,
+    is_alive: true,
+    is_retired: false,
+    initial: 'j',
+    address: {
+        street_address: "21 2nd Street",
+        city: "New York",
+        state: "NY",
+        postal_code: "10021",
+        latitude: 1000.0,
+    },
+    phone_numbers: [
+        {
+            ty: "home",
+            number: "212 736-3050"
+        },
+        {
+            ty: "office",
+            number: "646 799-3050"
+        },
+    ],
 },
-phone_numbers: [
-    {
-        ty: "home",
-        number: "212 736-3050"
-    },
-    {
-        ty: "office",
-        number: "646 799-3050"
-    },
-],

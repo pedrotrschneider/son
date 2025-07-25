@@ -61,6 +61,7 @@ impl Token {
         return match self.get_type() {
             TokenType::True => Some(SonValue::Bool(true)),
             TokenType::False => Some(SonValue::Bool(false)),
+            TokenType::Null => Some(SonValue::Null),
             TokenType::IntegerLiteral => match self.source.parse::<i128>() {
                 Ok(value) => Some(SonValue::Integer(value)),
                 Err(_) => None,
