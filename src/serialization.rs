@@ -144,9 +144,7 @@ impl SonPrinter {
 
                 for (key, value) in o.iter() {
                     print_indent(&mut string, indent + 1);
-                    string.push('\"');
                     string.push_str(&key.to_string());
-                    string.push('\"');
                     string.push_str(": ");
                     string.push_str(&self.son_to_string_inner(&value, indent + 1));
                 }
