@@ -87,7 +87,18 @@ impl Parser {
                     object_map.insert(field_name, value);
                     field_name = String::new();
                 }
-                TokenType::Identifier => field_name = token.get_source(),
+                TokenType::Identifier => {
+                    if self
+                        .lexer
+                        .previous_token()
+                        .is_some_and(|t| t.get_type() == TokenType::Colon)
+                    {
+                        object_map.insert(field_name, SonValue::Enum(token.get_source()));
+                        field_name = String::new();
+                    } else {
+                        field_name = token.get_source()
+                    }
+                }
                 TokenType::Error => {}
                 TokenType::EOF => {}
             }

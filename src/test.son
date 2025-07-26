@@ -14,11 +14,11 @@
     },
     phone_numbers: [
         {
-            ty: "home",
+            ty: Home,
             number: "212 736-3050"
         },
         {
-            ty: "office",
+            ty: Office,
             number: "646 799-3050"
         },
     ],

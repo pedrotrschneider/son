@@ -8,7 +8,13 @@ use crate::parser::Parser;
 use crate::serialization::{Deserialize, FromSon, Serialize, SonPrinter, SonValue, ToSon};
 use son_macros::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum PhoneType {
+    Home,
+    Office,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct Address {
     street_address: String,
     city: String,
@@ -17,13 +23,13 @@ struct Address {
     latitude: f64,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct PhoneNumber {
-    ty: String,
+    ty: PhoneType,
     number: String,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct Client {
     first_name: String,
     last_name: String,
@@ -38,9 +44,10 @@ struct Client {
 fn main() {
     let input_son = Parser::from_file_to_son_object("src/test.son");
     let client = Client::from_son(input_son).unwrap();
-    let output_son = client.to_son();
-    println!();
-
-    let printer = SonPrinter::new(String::from("...."));
-    println!("{}", printer.son_to_string(&output_son));
+    println!("{:#?}", client);
+    // println!();
+    // let output_son = client.to_son();
+    // println!("{:#?}", output_son);
+    // let printer = SonPrinter::new(String::from("...."));
+    // println!("{}", printer.son_to_string(&output_son));
 }

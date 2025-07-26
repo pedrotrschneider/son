@@ -6,35 +6,31 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
 
-    let fields = match &input.data {
-        Data::Struct(s) => match &s.fields {
-            Fields::Named(fields) => &fields.named,
-            _ => panic!("Deserialize can only be derived for structs with named fields"),
-        },
-        _ => panic!("Deserialize can only be derived for structs"),
-    };
-
-    let field_deserializers = fields.iter().map(|f| {
-        let field_name = f.ident.as_ref().unwrap();
-        let field_name_str = field_name.to_string();
-        let field_type = &f.ty;
-
-        let conversion_logic = generate_conversion_logic(field_type, quote!(field_value));
-
-        quote! {
-            let #field_name = {
-                let field_value = map.remove(#field_name_str)
-                    .ok_or_else(|| format!("Field '{}' not found in object", #field_name_str))?;
-                #conversion_logic?
+    let from_son_impl = match &input.data {
+        Data::Struct(data) => {
+            let fields = match &data.fields {
+                Fields::Named(fields) => &fields.named,
+                _ => panic!("Deserialize can only be derived for structs with named fields"),
             };
-        }
-    });
 
-    let field_names = fields.iter().map(|f| f.ident.as_ref().unwrap());
+            let field_deserializers = fields.iter().map(|f| {
+                let field_name = f.ident.as_ref().unwrap();
+                let field_name_str = field_name.to_string();
+                let field_type = &f.ty;
+                let conversion_logic = generate_conversion_logic(field_type, quote!(field_value));
 
-    let expanded = quote! {
-        impl FromSon for #name {
-            fn from_son(son: SonValue) -> Result<Self, String> {
+                quote! {
+                    let #field_name = {
+                        let field_value = map.remove(#field_name_str)
+                            .ok_or_else(|| format!("Field '{}' not found in object", #field_name_str))?;
+                        #conversion_logic?
+                    };
+                }
+            });
+
+            let field_names = fields.iter().map(|f| f.ident.as_ref().unwrap());
+
+            quote! {
                 let mut map = if let SonValue::Object(map) = son {
                     map
                 } else {
@@ -48,15 +44,52 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                 })
             }
         }
+        Data::Enum(data) => {
+            let deserialize_arms = data.variants.iter().map(|v| {
+                let variant_ident = &v.ident;
+                let variant_name_str = variant_ident.to_string();
+
+                match &v.fields {
+                    Fields::Unit => {
+                        quote! {
+                            #variant_name_str => Ok(Self::#variant_ident)
+                        }
+                    }
+                    _ => {
+                        panic!("Deserialize derive for enums currently only supports unit variants.");
+                    }
+                }
+            });
+
+            quote! {
+                if let SonValue::Enum(s) = son {
+                    match s.as_str() {
+                        #(#deserialize_arms,)*
+                        _ => Err(format!("Unknown variant '{}' for enum '{}'", s, stringify!(#name)))
+                    }
+                } else {
+                    Err(format!("Expected an Enum to deserialize '{}', but got a different type.", stringify!(#name)))
+                }
+            }
+        }
+        Data::Union(_) => panic!("Deserialize can only be derived for structs and enums"),
+    };
+
+    let expanded = quote! {
+        impl FromSon for #name {
+            fn from_son(son: SonValue) -> Result<Self, String> {
+                #from_son_impl
+            }
+        }
 
         impl Deserialize for #name {}
     };
 
-    return TokenStream::from(expanded);
+    TokenStream::from(expanded)
 }
 
 /// A helper function to generate the token stream for converting a SonValue
-/// into a specific Rust type.
+/// into a specific Rust type. (This function is unchanged)
 fn generate_conversion_logic(ty: &Type, value_accessor: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
     // Helper to get type identifier string (e.g., "String", "i32", "Vec")
     let get_type_ident_str = |t: &Type| -> Option<String> {

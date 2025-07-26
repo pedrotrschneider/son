@@ -8,6 +8,7 @@ pub enum SonValue {
     Integer(i128),
     String(String),
     Char(char),
+    Enum(String),
     Array(Vec<SonValue>),
     Object(HashMap<String, SonValue>),
 }
@@ -28,7 +29,7 @@ impl SonValue {
     }
 }
 
-pub trait FromSon: Sized + Default {
+pub trait FromSon: Sized {
     fn from_son(son: SonValue) -> Result<Self, String>;
 }
 
@@ -128,6 +129,7 @@ impl SonPrinter {
                 string.push_str(&c.to_string());
                 string.push('\"');
             }
+            SonValue::Enum(s) => string.push_str(&s),
             SonValue::Array(a) => {
                 string.push_str("[\n");
                 for value in a {

@@ -22,6 +22,9 @@ pub struct Lexer {
     leftovers: Vec<u8>,
     current_token_source: Vec<char>,
     current_token_col: u32,
+
+    current_token: Option<Token>,
+    previous_token: Option<Token>,
 }
 
 impl Lexer {
@@ -37,6 +40,9 @@ impl Lexer {
             leftovers: Vec::new(),
             current_token_source: Vec::new(),
             current_token_col: 0,
+
+            current_token: None,
+            previous_token: None,
         };
     }
 
@@ -48,7 +54,7 @@ impl Lexer {
             return self.new_token(TokenType::EOF);
         };
 
-        return match c {
+        let token = match c {
             '(' => self.new_token(TokenType::LeftParen),
             ')' => self.new_token(TokenType::RightParen),
             '{' => self.new_token(TokenType::LeftBrace),
@@ -65,6 +71,15 @@ impl Lexer {
             'a'..='z' | 'A'..='Z' | '_' => self.consume_identifier(),
             _ => self.new_error_token("Unexpected character"),
         };
+
+        self.previous_token = self.current_token.clone();
+        self.current_token = Some(token.clone());
+
+        return token;
+    }
+
+    pub fn previous_token(&self) -> Option<Token> {
+        return self.previous_token.clone();
     }
 }
 
