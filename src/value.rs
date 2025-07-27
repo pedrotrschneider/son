@@ -1,5 +1,6 @@
-use crate::{DeserializationError, Deserialize, FromSon, SonPrinter};
+use crate::{DeserializationError, Deserialize, FromSon, Serialize, SonPrinter, ToSon};
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -29,11 +30,6 @@ impl Value {
         };
     }
 
-    pub fn to_string(&self) -> String {
-        let printer = SonPrinter::new("    ".to_string());
-        return printer.son_to_string(&self);
-    }
-
     pub fn negate(&self) -> Value {
         return match self {
             Value::Bool(b) => Value::Bool(!b),
@@ -44,10 +40,23 @@ impl Value {
     }
 }
 
+impl Deserialize for Value {}
 impl FromSon for Value {
     fn from_son(son: Value) -> Result<Self, DeserializationError> {
         return Ok(son);
     }
 }
 
-impl Deserialize for Value {}
+impl Serialize for Value {}
+impl ToSon for Value {
+    fn to_son(&self) -> Value {
+        return self.clone();
+    }
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let printer = SonPrinter::new("    ".to_string());
+        write!(f, "{}", printer.son_to_string(&self))
+    }
+}
