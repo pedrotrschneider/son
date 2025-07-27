@@ -22,7 +22,7 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                 quote! {
                     let #field_name = {
                         let field_value = map.remove(#field_name_str)
-                            .ok_or_else(|| format!("Field '{}' not found in object", #field_name_str))?;
+                            .ok_or_else(|| DeserializationError::MissingField { field: #field_name_str.to_string() })?;
                         #conversion_logic?
                     };
                 }
@@ -34,7 +34,10 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                 let mut map = if let SonValue::Object(map) = son {
                     map
                 } else {
-                    return Err(format!("Expected an Object to deserialize '{}', but got a different type.", stringify!(#name)));
+                    return Err(DeserializationError::UnexpectedType {
+                        expected: "Object".to_string(),
+                        found: son.get_type().to_string(),
+                    });
                 };
 
                 #(#field_deserializers)*
@@ -65,10 +68,13 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
                 if let SonValue::Enum(s) = son {
                     match s.as_str() {
                         #(#deserialize_arms,)*
-                        _ => Err(format!("Unknown variant '{}' for enum '{}'", s, stringify!(#name)))
+                        _ => Err(DeserializationError::UnknownVariant { variant: s.to_string(), enum_name: stringify!(#name).to_string() })
                     }
                 } else {
-                    Err(format!("Expected an Enum to deserialize '{}', but got a different type.", stringify!(#name)))
+                    Err(DeserializationError::UnexpectedType {
+                        expected: "Enum".to_string(),
+                        found: son.get_type().to_string(),
+                    })
                 }
             }
         }
@@ -77,7 +83,7 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl FromSon for #name {
-            fn from_son(son: SonValue) -> Result<Self, String> {
+            fn from_son(son: SonValue) -> Result<Self, DeserializationError> {
                 #from_son_impl
             }
         }
@@ -100,28 +106,46 @@ fn generate_conversion_logic(ty: &Type, value_accessor: proc_macro2::TokenStream
         }
     };
 
+    if let Type::Path(type_path) = ty {
+        if let Some(segment) = type_path.path.segments.last() {
+            if segment.ident == "Option" {
+                if let PathArguments::AngleBracketed(args) = &segment.arguments {
+                    if let Some(GenericArgument::Type(inner_ty)) = args.args.first() {
+                        let inner_logic = generate_conversion_logic(inner_ty, quote!(v));
+                        return quote! {
+                            match #value_accessor {
+                                SonValue::Null => Ok(None),
+                                v => #inner_logic.map(Some),
+                            }
+                        };
+                    }
+                }
+            }
+        }
+    }
+
     let type_ident_str = get_type_ident_str(ty).unwrap_or_default();
 
     return match type_ident_str.as_str() {
         "String" => quote! {
-            if let SonValue::String(v) = #value_accessor { Ok(v) } else { Err("Type mismatch: expected String".to_string()) }
+            if let SonValue::String(v) = #value_accessor { Ok(v) } else { Err(DeserializationError::UnexpectedType { expected: "String".to_string(), found: #value_accessor.get_type().to_string() }) }
         },
         "char" => quote! {
-            if let SonValue::Char(v) = #value_accessor { Ok(v) } else { Err("Type mismatch: expected Char".to_string()) }
+            if let SonValue::Char(v) = #value_accessor { Ok(v) } else { Err(DeserializationError::UnexpectedType { expected: "Char".to_string(), found: #value_accessor.get_type().to_string() }) }
         },
         "bool" => quote! {
-            if let SonValue::Bool(v) = #value_accessor { Ok(v) } else { Err("Type mismatch: expected Bool".to_string()) }
+            if let SonValue::Bool(v) = #value_accessor { Ok(v) } else { Err(DeserializationError::UnexpectedType { expected: "Bool".to_string(), found: #value_accessor.get_type().to_string() }) }
         },
         "f32" | "f64" => quote! {
-            if let SonValue::Float(v) = #value_accessor { Ok(v as #ty) } else { Err("Type mismatch: expected Float".to_string()) }
+            if let SonValue::Float(v) = #value_accessor { Ok(v as #ty) } else { Err(DeserializationError::UnexpectedType { expected: "Float".to_string(), found: #value_accessor.get_type().to_string() }) }
         },
         "i8" | "i16" | "i32" | "i64" | "i128" | "isize" => quote! {
-            if let SonValue::Integer(v) = #value_accessor { Ok(v as #ty) } else { Err("Type mismatch: expected Integer".to_string()) }
+            if let SonValue::Integer(v) = #value_accessor { Ok(v as #ty) } else { Err(DeserializationError::UnexpectedType { expected: "Integer".to_string(), found: #value_accessor.get_type().to_string() }) }
         },
         "u8" | "u16" | "u32" | "u64" | "u128" | "usize" => quote! {
             if let SonValue::Integer(v) = #value_accessor {
-                if v < 0 { Err("Cannot assign a negative integer to an unsigned type".to_string()) } else { Ok(v as #ty) }
-            } else { Err("Type mismatch: expected Integer".to_string()) }
+                if v < 0 { Err(DeserializationError::InvalidValue{ message: "Cannot assign a negative integer to an unsigned type".to_string() }) } else { Ok(v as #ty) }
+            } else { Err(DeserializationError::UnexpectedType { expected: "Integer".to_string(), found: #value_accessor.get_type().to_string() }) }
         },
         "Vec" => {
             let inner_ty = if let Type::Path(type_path) = ty {
@@ -146,7 +170,7 @@ fn generate_conversion_logic(ty: &Type, value_accessor: proc_macro2::TokenStream
                            .map(|item| #inner_conversion)
                            .collect::<Result<Vec<_>, _>>()
                     } else {
-                        Err("Type mismatch: expected Array".to_string())
+                        Err(DeserializationError::UnexpectedType { expected: "Array".to_string(), found: #value_accessor.get_type().to_string() })
                     }
                 }
             } else {
@@ -154,7 +178,7 @@ fn generate_conversion_logic(ty: &Type, value_accessor: proc_macro2::TokenStream
             }
         }
         _ => quote! {
-            #ty::from_son(#value_accessor)
+            #ty::from_son(#value_accessor).map_err(|e| e.into())
         },
     };
 }

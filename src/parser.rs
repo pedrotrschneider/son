@@ -1,35 +1,40 @@
-use crate::lexer::Lexer;
+use crate::error::ParseError;
+use crate::lexer::SonLexer;
 use crate::serialization::SonValue;
 use crate::token::{Token, TokenType};
 use std::collections::HashMap;
 
-pub struct Parser {
-    lexer: Lexer,
+pub struct SonParser {
+    lexer: SonLexer,
     negate_flag: bool,
 }
 
-impl Parser {
-    pub fn from_file_to_son_object(file_path: &str) -> SonValue {
+impl SonParser {
+    pub fn from_file_to_son_object(file_path: &str) -> Result<SonValue, ParseError> {
         let mut parser = Self {
-            lexer: Lexer::new(file_path),
+            lexer: SonLexer::new(file_path),
             negate_flag: false,
         };
         return parser.parse();
     }
 
-    pub fn parse(&mut self) -> SonValue {
+    pub fn parse(&mut self) -> Result<SonValue, ParseError> {
         if let Some(token) = self.lexer.next() {
             return match token.get_type() {
                 TokenType::LeftBrace => self.parse_object(),
                 TokenType::LeftBracket => self.parse_array(),
-                _ => panic!("SON files can only begin with either {{ or ["),
+                _ => Err(ParseError::UnexpectedToken {
+                    expected: vec![TokenType::LeftBrace, TokenType::LeftBracket],
+                    found: token,
+                    message: "SON files can only begin with either a { or [".to_string(),
+                }),
             };
         }
-        return SonValue::Null;
+        return Err(ParseError::UnexpectedEOF);
     }
 
-    fn parse_value(&mut self, token: Token) -> SonValue {
-        match token.get_type() {
+    fn parse_value(&mut self, token: Token) -> Result<SonValue, ParseError> {
+        return match token.get_type() {
             TokenType::True
             | TokenType::False
             | TokenType::Null
@@ -44,15 +49,25 @@ impl Parser {
                     son_value
                 };
                 self.negate_flag = false;
-                return son_value;
+                Ok(son_value)
             }
-            _ => {}
-        }
-
-        return SonValue::Null;
+            _ => Err(ParseError::UnexpectedToken {
+                expected: vec![
+                    TokenType::True,
+                    TokenType::False,
+                    TokenType::Null,
+                    TokenType::IntegerLiteral,
+                    TokenType::FloatLiteral,
+                    TokenType::StringLiteral,
+                    TokenType::CharLiteral,
+                ],
+                found: token,
+                message: "".to_string(),
+            }),
+        };
     }
 
-    fn parse_object(&mut self) -> SonValue {
+    fn parse_object(&mut self) -> Result<SonValue, ParseError> {
         let mut object_map: HashMap<String, SonValue> = HashMap::new();
 
         let mut field_name = String::new();
@@ -61,13 +76,13 @@ impl Parser {
                 TokenType::LeftParen => {}
                 TokenType::RightParen => {}
                 TokenType::LeftBrace => {
-                    let object = self.parse_object();
+                    let object = self.parse_object()?;
                     object_map.insert(field_name, object);
                     field_name = String::new();
                 }
                 TokenType::RightBrace => break,
                 TokenType::LeftBracket => {
-                    let array = self.parse_array();
+                    let array = self.parse_array()?;
                     object_map.insert(field_name, array);
                     field_name = String::new();
                 }
@@ -83,7 +98,7 @@ impl Parser {
                 | TokenType::FloatLiteral
                 | TokenType::StringLiteral
                 | TokenType::CharLiteral => {
-                    let value = self.parse_value(token);
+                    let value = self.parse_value(token)?;
                     object_map.insert(field_name, value);
                     field_name = String::new();
                 }
@@ -100,26 +115,41 @@ impl Parser {
                     }
                 }
                 TokenType::Error => {}
-                TokenType::EOF => {}
+                _ => {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: vec![
+                            TokenType::True,
+                            TokenType::False,
+                            TokenType::Null,
+                            TokenType::IntegerLiteral,
+                            TokenType::FloatLiteral,
+                            TokenType::StringLiteral,
+                            TokenType::CharLiteral,
+                            TokenType::Identifier,
+                        ],
+                        found: token,
+                        message: "".to_string(),
+                    });
+                }
             }
         }
 
-        return SonValue::Object(object_map);
+        return Ok(SonValue::Object(object_map));
     }
 
-    fn parse_array(&mut self) -> SonValue {
+    fn parse_array(&mut self) -> Result<SonValue, ParseError> {
         let mut value_array: Vec<SonValue> = Vec::new();
         while let Some(token) = self.lexer.next() {
             match token.get_type() {
                 TokenType::LeftParen => {}
                 TokenType::RightParen => {}
                 TokenType::LeftBrace => {
-                    let object = self.parse_object();
+                    let object = self.parse_object()?;
                     value_array.push(object);
                 }
                 TokenType::RightBrace => {}
                 TokenType::LeftBracket => {
-                    let array = self.parse_array();
+                    let array = self.parse_array()?;
                     value_array.push(array);
                 }
                 TokenType::RightBracket => break,
@@ -134,7 +164,7 @@ impl Parser {
                 | TokenType::FloatLiteral
                 | TokenType::StringLiteral
                 | TokenType::CharLiteral => {
-                    let value = self.parse_value(token);
+                    let value = self.parse_value(token)?;
                     value_array.push(value);
                 }
                 TokenType::Identifier => {}
@@ -143,6 +173,6 @@ impl Parser {
             }
         }
 
-        return SonValue::Array(value_array);
+        return Ok(SonValue::Array(value_array));
     }
 }

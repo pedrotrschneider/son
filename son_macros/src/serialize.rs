@@ -26,7 +26,7 @@ pub fn serialize_derive(input: TokenStream) -> TokenStream {
             quote! {
                 let mut map = std::collections::HashMap::new();
                 #(#field_serializers)*
-                SonValue::Object(map)
+                return SonValue::Object(map);
             }
         }
         Data::Enum(data) => {

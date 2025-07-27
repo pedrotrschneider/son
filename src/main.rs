@@ -1,10 +1,12 @@
+mod error;
 mod lexer;
 mod parser;
 mod serialization;
 mod token;
 mod util;
 
-use crate::parser::Parser;
+use crate::error::DeserializationError;
+use crate::parser::SonParser;
 use crate::serialization::{Deserialize, FromSon, Serialize, SonPrinter, SonValue, ToSon};
 use son_macros::{Deserialize, Serialize};
 
@@ -42,12 +44,7 @@ struct Client {
 }
 
 fn main() {
-    let input_son = Parser::from_file_to_son_object("src/test.son");
+    let input_son = SonParser::from_file_to_son_object("src/test.son").unwrap();
     let client = Client::from_son(input_son).unwrap();
     println!("{:#?}", client);
-    // println!();
-    // let output_son = client.to_son();
-    // println!("{:#?}", output_son);
-    // let printer = SonPrinter::new(String::from("...."));
-    // println!("{}", printer.son_to_string(&output_son));
 }

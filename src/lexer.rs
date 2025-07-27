@@ -12,7 +12,7 @@ impl Keywords {
 }
 
 const TOKENIZER_BUFFER_SIZE: usize = 1024;
-pub struct Lexer {
+pub struct SonLexer {
     // source_file_path: String,
     reader: BufReader<File>,
     line: u32,
@@ -27,7 +27,7 @@ pub struct Lexer {
     previous_token: Option<Token>,
 }
 
-impl Lexer {
+impl SonLexer {
     pub fn new(file_path: &str) -> Self {
         let file = File::open(file_path).unwrap();
         return Self {
@@ -83,7 +83,7 @@ impl Lexer {
     }
 }
 
-impl Iterator for Lexer {
+impl Iterator for SonLexer {
     type Item = Token;
     fn next(&mut self) -> Option<Self::Item> {
         let token = self.next_token();
@@ -94,7 +94,7 @@ impl Iterator for Lexer {
     }
 }
 
-impl Lexer {
+impl SonLexer {
     fn new_token(&mut self, token_type: TokenType) -> Token {
         let token_source = self.current_token_source.iter().collect();
         self.current_token_source.clear();

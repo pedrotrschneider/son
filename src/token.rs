@@ -86,10 +86,10 @@ impl Token {
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         return match self.token_type {
-            TokenType::IntegerLiteral => write!(f, "[{}:{}] float: {}", self.line, self.col, self.source),
-            TokenType::FloatLiteral => write!(f, "[{}:{}] int: {}", self.line, self.col, self.source),
-            TokenType::StringLiteral => write!(f, "[{}:{}] string: {}", self.line, self.col, self.source),
-            TokenType::CharLiteral => write!(f, "[{}:{}] char: {}", self.line, self.col, self.source),
+            TokenType::IntegerLiteral => write!(f, "[{}:{}] Float: {}", self.line, self.col, self.source),
+            TokenType::FloatLiteral => write!(f, "[{}:{}] Integer: {}", self.line, self.col, self.source),
+            TokenType::StringLiteral => write!(f, "[{}:{}] String: {}", self.line, self.col, self.source),
+            TokenType::CharLiteral => write!(f, "[{}:{}] Char: {}", self.line, self.col, self.source),
             TokenType::Identifier => write!(f, "[{}:{}] Identifier: {}", self.line, self.col, self.source),
             TokenType::Error => write!(f, "[Error] [{}:{}] {}", self.line, self.col, self.source),
             _ => write!(f, "[{}:{}] {:?}", self.line, self.col, self.token_type),

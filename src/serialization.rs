@@ -1,3 +1,4 @@
+use crate::error::DeserializationError;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -14,6 +15,20 @@ pub enum SonValue {
 }
 
 impl SonValue {
+    pub fn get_type(&self) -> String {
+        return match self {
+            SonValue::Null => "Null".to_string(),
+            SonValue::Bool(_) => "Bool".to_string(),
+            SonValue::Float(_) => "Float".to_string(),
+            SonValue::Integer(_) => "Integer".to_string(),
+            SonValue::String(_) => "String".to_string(),
+            SonValue::Char(_) => "Char".to_string(),
+            SonValue::Enum(_) => "Enum".to_string(),
+            SonValue::Array(_) => "Array".to_string(),
+            SonValue::Object(_) => "Object".to_string(),
+        };
+    }
+
     pub fn to_string(&self) -> String {
         let printer = SonPrinter::new("    ".to_string());
         return printer.son_to_string(&self);
@@ -30,7 +45,7 @@ impl SonValue {
 }
 
 pub trait FromSon: Sized {
-    fn from_son(son: SonValue) -> Result<Self, String>;
+    fn from_son(son: SonValue) -> Result<Self, DeserializationError>;
 }
 
 pub trait Deserialize: FromSon {}
