@@ -1,4 +1,4 @@
-use crate::{DeserializationError, Deserialize, FromSon, Serialize, SonPrinter, ToSon};
+use crate::{DeserializationError, Deserialize, FromSon, Printer, Serialize, ToSon};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
@@ -56,7 +56,7 @@ impl ToSon for Value {
 
 impl Display for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let printer = SonPrinter::new("    ".to_string());
+        let printer = Printer::new("    ".to_string());
         write!(f, "{}", printer.son_to_string(&self))
     }
 }

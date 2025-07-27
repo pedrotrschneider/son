@@ -1,14 +1,18 @@
+pub mod deserialize;
 pub mod error;
 pub mod lexer;
 pub mod parser;
-pub mod serialization;
+pub mod printer;
+pub mod serialize;
 pub mod token;
 pub mod util;
 pub mod value;
 
+pub use crate::deserialize::{Deserialize, FromSon};
 pub use crate::error::{DeserializationError, Error, ParseError};
 use crate::parser::SonParser;
-pub use crate::serialization::{Deserialize, FromSon, Serialize, SonPrinter, ToSon};
+use crate::printer::Printer;
+pub use crate::serialize::{Serialize, ToSon};
 pub use crate::value::Value;
 pub use son_macros::{Deserialize, Serialize};
 use std::fs::File;
@@ -51,6 +55,6 @@ where
     T: Serialize,
 {
     let son = to_son(value);
-    let printer = SonPrinter::new(indentation.to_string());
+    let printer = Printer::new(indentation.to_string());
     return printer.son_to_string(&son);
 }
