@@ -26,7 +26,7 @@ pub fn serialize_derive(input: TokenStream) -> TokenStream {
             quote! {
                 let mut map = std::collections::HashMap::new();
                 #(#field_serializers)*
-                return SonValue::Object(map);
+                return Value::Object(map);
             }
         }
         Data::Enum(data) => {
@@ -40,7 +40,7 @@ pub fn serialize_derive(input: TokenStream) -> TokenStream {
                 match &v.fields {
                     Fields::Unit => {
                         quote! {
-                            Self::#variant_ident => SonValue::Enum(#variant_name_str.to_string())
+                            Self::#variant_ident => Value::Enum(#variant_name_str.to_string())
                         }
                     }
                     _ => {
@@ -61,7 +61,7 @@ pub fn serialize_derive(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         // Implement the core `ToSon` logic for the struct or enum.
         impl ToSon for #name {
-            fn to_son(&self) -> SonValue {
+            fn to_son(&self) -> Value {
                 #to_son_impl
             }
         }

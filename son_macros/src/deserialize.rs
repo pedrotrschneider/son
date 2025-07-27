@@ -31,7 +31,7 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
             let field_names = fields.iter().map(|f| f.ident.as_ref().unwrap());
 
             quote! {
-                let mut map = if let SonValue::Object(map) = son {
+                let mut map = if let Value::Object(map) = son {
                     map
                 } else {
                     return Err(DeserializationError::UnexpectedType {
@@ -65,7 +65,7 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
             });
 
             quote! {
-                if let SonValue::Enum(s) = son {
+                if let Value::Enum(s) = son {
                     match s.as_str() {
                         #(#deserialize_arms,)*
                         _ => Err(DeserializationError::UnknownVariant { variant: s.to_string(), enum_name: stringify!(#name).to_string() })
@@ -83,7 +83,7 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl FromSon for #name {
-            fn from_son(son: SonValue) -> Result<Self, DeserializationError> {
+            fn from_son(son: Value) -> Result<Self, DeserializationError> {
                 #from_son_impl
             }
         }
@@ -94,7 +94,7 @@ pub fn deserialize_derive(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-/// A helper function to generate the token stream for converting a SonValue
+/// A helper function to generate the token stream for converting a Value
 /// into a specific Rust type. (This function is unchanged)
 fn generate_conversion_logic(ty: &Type, value_accessor: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
     // Helper to get type identifier string (e.g., "String", "i32", "Vec")
@@ -114,7 +114,7 @@ fn generate_conversion_logic(ty: &Type, value_accessor: proc_macro2::TokenStream
                         let inner_logic = generate_conversion_logic(inner_ty, quote!(v));
                         return quote! {
                             match #value_accessor {
-                                SonValue::Null => Ok(None),
+                                Value::Null => Ok(None),
                                 v => #inner_logic.map(Some),
                             }
                         };
@@ -128,22 +128,22 @@ fn generate_conversion_logic(ty: &Type, value_accessor: proc_macro2::TokenStream
 
     return match type_ident_str.as_str() {
         "String" => quote! {
-            if let SonValue::String(v) = #value_accessor { Ok(v) } else { Err(DeserializationError::UnexpectedType { expected: "String".to_string(), found: #value_accessor.get_type().to_string() }) }
+            if let Value::String(v) = #value_accessor { Ok(v) } else { Err(DeserializationError::UnexpectedType { expected: "String".to_string(), found: #value_accessor.get_type().to_string() }) }
         },
         "char" => quote! {
-            if let SonValue::Char(v) = #value_accessor { Ok(v) } else { Err(DeserializationError::UnexpectedType { expected: "Char".to_string(), found: #value_accessor.get_type().to_string() }) }
+            if let Value::Char(v) = #value_accessor { Ok(v) } else { Err(DeserializationError::UnexpectedType { expected: "Char".to_string(), found: #value_accessor.get_type().to_string() }) }
         },
         "bool" => quote! {
-            if let SonValue::Bool(v) = #value_accessor { Ok(v) } else { Err(DeserializationError::UnexpectedType { expected: "Bool".to_string(), found: #value_accessor.get_type().to_string() }) }
+            if let Value::Bool(v) = #value_accessor { Ok(v) } else { Err(DeserializationError::UnexpectedType { expected: "Bool".to_string(), found: #value_accessor.get_type().to_string() }) }
         },
         "f32" | "f64" => quote! {
-            if let SonValue::Float(v) = #value_accessor { Ok(v as #ty) } else { Err(DeserializationError::UnexpectedType { expected: "Float".to_string(), found: #value_accessor.get_type().to_string() }) }
+            if let Value::Float(v) = #value_accessor { Ok(v as #ty) } else { Err(DeserializationError::UnexpectedType { expected: "Float".to_string(), found: #value_accessor.get_type().to_string() }) }
         },
         "i8" | "i16" | "i32" | "i64" | "i128" | "isize" => quote! {
-            if let SonValue::Integer(v) = #value_accessor { Ok(v as #ty) } else { Err(DeserializationError::UnexpectedType { expected: "Integer".to_string(), found: #value_accessor.get_type().to_string() }) }
+            if let Value::Integer(v) = #value_accessor { Ok(v as #ty) } else { Err(DeserializationError::UnexpectedType { expected: "Integer".to_string(), found: #value_accessor.get_type().to_string() }) }
         },
         "u8" | "u16" | "u32" | "u64" | "u128" | "usize" => quote! {
-            if let SonValue::Integer(v) = #value_accessor {
+            if let Value::Integer(v) = #value_accessor {
                 if v < 0 { Err(DeserializationError::InvalidValue{ message: "Cannot assign a negative integer to an unsigned type".to_string() }) } else { Ok(v as #ty) }
             } else { Err(DeserializationError::UnexpectedType { expected: "Integer".to_string(), found: #value_accessor.get_type().to_string() }) }
         },
@@ -165,7 +165,7 @@ fn generate_conversion_logic(ty: &Type, value_accessor: proc_macro2::TokenStream
             if let Some(inner_ty) = inner_ty {
                 let inner_conversion = generate_conversion_logic(inner_ty, quote!(item));
                 quote! {
-                    if let SonValue::Array(arr) = #value_accessor {
+                    if let Value::Array(arr) = #value_accessor {
                         arr.into_iter()
                            .map(|item| #inner_conversion)
                            .collect::<Result<Vec<_>, _>>()

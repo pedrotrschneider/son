@@ -1,4 +1,4 @@
-use crate::serialization::SonValue;
+use crate::Value;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,27 +57,27 @@ impl Token {
         return self.source.clone();
     }
 
-    pub fn get_value(&self) -> Option<SonValue> {
+    pub fn get_value(&self) -> Option<Value> {
         return match self.get_type() {
-            TokenType::True => Some(SonValue::Bool(true)),
-            TokenType::False => Some(SonValue::Bool(false)),
-            TokenType::Null => Some(SonValue::Null),
+            TokenType::True => Some(Value::Bool(true)),
+            TokenType::False => Some(Value::Bool(false)),
+            TokenType::Null => Some(Value::Null),
             TokenType::IntegerLiteral => match self.source.parse::<i128>() {
-                Ok(value) => Some(SonValue::Integer(value)),
+                Ok(value) => Some(Value::Integer(value)),
                 Err(_) => None,
             },
             TokenType::FloatLiteral => match self.source.parse::<f64>() {
-                Ok(value) => Some(SonValue::Float(value)),
+                Ok(value) => Some(Value::Float(value)),
                 Err(_) => None,
             },
-            TokenType::StringLiteral => Some(SonValue::String(
+            TokenType::StringLiteral => Some(Value::String(
                 self.source
                     .strip_prefix('"')
                     .and_then(|s| s.strip_suffix('"'))
                     .unwrap()
                     .to_owned(),
             )),
-            TokenType::CharLiteral => Some(SonValue::Char(self.source.chars().nth(1).unwrap())),
+            TokenType::CharLiteral => Some(Value::Char(self.source.chars().nth(1).unwrap())),
             _ => None,
         };
     }

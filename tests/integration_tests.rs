@@ -1,14 +1,4 @@
-mod error;
-mod lexer;
-mod parser;
-mod serialization;
-mod token;
-mod util;
-
-use crate::error::DeserializationError;
-use crate::parser::SonParser;
-use crate::serialization::{Deserialize, FromSon, Serialize, SonPrinter, SonValue, ToSon};
-use son_macros::{Deserialize, Serialize};
+use son::{DeserializationError, Deserialize, FromSon, Serialize, ToSon, Value};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 enum PhoneType {
@@ -43,8 +33,8 @@ struct Client {
     phone_numbers: Vec<PhoneNumber>,
 }
 
-fn main() {
-    let input_son = SonParser::from_file_to_son_object("src/test.son").unwrap();
-    let client = Client::from_son(input_son).unwrap();
-    println!("{:#?}", client);
+#[test]
+fn test() {
+    let result = son::from_file::<Value>("src/test.son");
+    assert!(result.is_ok(), "{}", result.err().unwrap());
 }

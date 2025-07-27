@@ -1,8 +1,7 @@
 use crate::token::{Token, TokenType};
 use crate::util;
 use std::collections::VecDeque;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 
 struct Keywords {}
 impl Keywords {
@@ -12,9 +11,11 @@ impl Keywords {
 }
 
 const TOKENIZER_BUFFER_SIZE: usize = 1024;
-pub struct SonLexer {
-    // source_file_path: String,
-    reader: BufReader<File>,
+pub struct SonLexer<T>
+where
+    T: Sized + Read,
+{
+    reader: BufReader<T>,
     line: u32,
     col: u32,
 
@@ -27,12 +28,17 @@ pub struct SonLexer {
     previous_token: Option<Token>,
 }
 
-impl SonLexer {
-    pub fn new(file_path: &str) -> Self {
-        let file = File::open(file_path).unwrap();
-        return Self {
-            // source_file_path: file_path.to_owned(),
-            reader: BufReader::with_capacity(TOKENIZER_BUFFER_SIZE, file),
+impl<T> SonLexer<T>
+where
+    T: Sized + Read,
+{
+    pub fn new(data: T) -> SonLexer<T> {
+        return Self::from_buf_reader(BufReader::with_capacity(TOKENIZER_BUFFER_SIZE, data));
+    }
+
+    pub fn from_buf_reader(buf_reader: BufReader<T>) -> SonLexer<T> {
+        return SonLexer {
+            reader: buf_reader,
             line: 1,
             col: 0,
 
@@ -77,13 +83,12 @@ impl SonLexer {
 
         return token;
     }
-
-    pub fn previous_token(&self) -> Option<Token> {
-        return self.previous_token.clone();
-    }
 }
 
-impl Iterator for SonLexer {
+impl<T> Iterator for SonLexer<T>
+where
+    T: Sized + Read,
+{
     type Item = Token;
     fn next(&mut self) -> Option<Self::Item> {
         let token = self.next_token();
@@ -94,7 +99,10 @@ impl Iterator for SonLexer {
     }
 }
 
-impl SonLexer {
+impl<T> SonLexer<T>
+where
+    T: Sized + Read,
+{
     fn new_token(&mut self, token_type: TokenType) -> Token {
         let token_source = self.current_token_source.iter().collect();
         self.current_token_source.clear();
@@ -170,6 +178,7 @@ impl SonLexer {
     fn advance_line(&mut self) {
         self.line += 1;
         self.col = 0;
+        self.advance();
     }
 
     fn skip_comment(&mut self) {
@@ -183,10 +192,7 @@ impl SonLexer {
         while let Some(c) = self.peek() {
             match c {
                 ' ' | '\r' | '\t' => util::discard(self.advance()),
-                '\n' => {
-                    self.advance_line();
-                    self.advance();
-                }
+                '\n' => self.advance_line(),
                 '/' if self.peek_next() == Some('/') => self.skip_comment(),
                 _ => break,
             }
@@ -210,10 +216,7 @@ impl SonLexer {
         // Advance until the end of the string literal.
         while let Some(c) = self.peek() {
             match c {
-                '\n' => {
-                    self.advance_line();
-                    self.advance();
-                }
+                '\n' => self.advance_line(),
                 '"' => break,
                 _ => util::discard(self.advance()),
             }

@@ -1,178 +1,167 @@
+use crate::ParseError::UnexpectedToken;
 use crate::error::ParseError;
 use crate::lexer::SonLexer;
-use crate::serialization::SonValue;
-use crate::token::{Token, TokenType};
+use crate::token::TokenType;
+use crate::value::Value;
 use std::collections::HashMap;
+use std::io::Read;
 
-pub struct SonParser {
-    lexer: SonLexer,
-    negate_flag: bool,
+pub struct SonParser<T>
+where
+    T: Sized + Read,
+{
+    lexer: SonLexer<T>,
 }
 
-impl SonParser {
-    pub fn from_file_to_son_object(file_path: &str) -> Result<SonValue, ParseError> {
-        let mut parser = Self {
-            lexer: SonLexer::new(file_path),
-            negate_flag: false,
+impl<T> SonParser<T>
+where
+    T: Sized + Read,
+{
+    pub fn new(data: T) -> SonParser<T> {
+        return Self {
+            lexer: SonLexer::new(data),
         };
-        return parser.parse();
     }
 
-    pub fn parse(&mut self) -> Result<SonValue, ParseError> {
-        if let Some(token) = self.lexer.next() {
-            return match token.get_type() {
-                TokenType::LeftBrace => self.parse_object(),
-                TokenType::LeftBracket => self.parse_array(),
-                _ => Err(ParseError::UnexpectedToken {
-                    expected: vec![TokenType::LeftBrace, TokenType::LeftBracket],
-                    found: token,
-                    message: "SON files can only begin with either a { or [".to_string(),
-                }),
-            };
-        }
-        return Err(ParseError::UnexpectedEOF);
-    }
-
-    fn parse_value(&mut self, token: Token) -> Result<SonValue, ParseError> {
+    pub fn parse(&mut self) -> Result<Value, ParseError> {
+        let token = self.lexer.next_token();
         return match token.get_type() {
+            // Expected tokens
+            TokenType::LeftBrace => self.parse_object(),
+            TokenType::LeftBracket => self.parse_array(),
+
+            // Unexpected tokens
+            TokenType::Error => Err(ParseError::ErrorToken(token)),
+            TokenType::EOF => Err(ParseError::UnexpectedEOF),
+            _ => Err(UnexpectedToken {
+                expected: &[TokenType::LeftBrace, TokenType::LeftBracket],
+                found: token,
+                message: "SON files can only begin with either a { or [".to_string(),
+            }),
+        };
+    }
+
+    fn parse_value(&mut self) -> Result<Value, ParseError> {
+        let expected_tokens: &'static [TokenType] = &[
+            TokenType::LeftBrace,
+            TokenType::LeftBracket,
+            TokenType::Negative,
+            TokenType::True,
+            TokenType::False,
+            TokenType::Null,
+            TokenType::IntegerLiteral,
+            TokenType::FloatLiteral,
+            TokenType::StringLiteral,
+            TokenType::CharLiteral,
+            TokenType::Identifier,
+        ];
+
+        let token = self.lexer.next_token();
+        return match token.get_type() {
+            // Expected tokens
+            TokenType::LeftBrace => self.parse_object(),
+            TokenType::LeftBracket => self.parse_array(),
+            TokenType::Negative => Ok(self.parse_value()?.negate()),
             TokenType::True
             | TokenType::False
             | TokenType::Null
             | TokenType::IntegerLiteral
             | TokenType::FloatLiteral
             | TokenType::StringLiteral
-            | TokenType::CharLiteral => {
-                let son_value = token.get_value().unwrap();
-                let son_value = if self.negate_flag {
-                    son_value.negate()
-                } else {
-                    son_value
-                };
-                self.negate_flag = false;
-                Ok(son_value)
-            }
-            _ => Err(ParseError::UnexpectedToken {
-                expected: vec![
-                    TokenType::True,
-                    TokenType::False,
-                    TokenType::Null,
-                    TokenType::IntegerLiteral,
-                    TokenType::FloatLiteral,
-                    TokenType::StringLiteral,
-                    TokenType::CharLiteral,
-                ],
+            | TokenType::CharLiteral => Ok(token.get_value().unwrap()),
+            TokenType::Identifier => Ok(Value::Enum(token.get_source())),
+
+            // Unexpected tokens
+            TokenType::Error => Err(ParseError::ErrorToken(token)),
+            TokenType::EOF => Err(ParseError::UnexpectedEOF),
+            _ => Err(UnexpectedToken {
+                expected: expected_tokens,
                 found: token,
                 message: "".to_string(),
             }),
         };
     }
 
-    fn parse_object(&mut self) -> Result<SonValue, ParseError> {
-        let mut object_map: HashMap<String, SonValue> = HashMap::new();
+    fn parse_object(&mut self) -> Result<Value, ParseError> {
+        let expected_tokens: &'static [TokenType] = &[
+            TokenType::LeftBrace,
+            TokenType::RightBrace,
+            TokenType::LeftBracket,
+            TokenType::Colon,
+            TokenType::Identifier,
+        ];
+
+        let mut object_map: HashMap<String, Value> = HashMap::new();
+        let mut try_insert = |field_name: &mut String, value, token| {
+            if !field_name.is_empty() {
+                object_map.insert(field_name.clone(), value);
+                field_name.clear();
+                return Ok(());
+            }
+            return Err(UnexpectedToken {
+                expected: &[TokenType::Identifier],
+                found: token,
+                message: "Expected a field name".to_string(),
+            });
+        };
 
         let mut field_name = String::new();
         while let Some(token) = self.lexer.next() {
             match token.get_type() {
-                TokenType::LeftParen => {}
-                TokenType::RightParen => {}
-                TokenType::LeftBrace => {
-                    let object = self.parse_object()?;
-                    object_map.insert(field_name, object);
-                    field_name = String::new();
-                }
+                // Expected tokens
+                TokenType::Identifier => field_name = token.get_source(),
+                TokenType::Colon => try_insert(&mut field_name, self.parse_value()?, token)?,
+                TokenType::LeftBrace => try_insert(&mut field_name, self.parse_object()?, token)?,
+                TokenType::LeftBracket => try_insert(&mut field_name, self.parse_array()?, token)?,
                 TokenType::RightBrace => break,
-                TokenType::LeftBracket => {
-                    let array = self.parse_array()?;
-                    object_map.insert(field_name, array);
-                    field_name = String::new();
-                }
-                TokenType::RightBracket => {}
                 TokenType::Comma => {}
-                TokenType::Dot => {}
-                TokenType::Colon => {}
-                TokenType::Negative => self.negate_flag = true,
-                TokenType::True
-                | TokenType::False
-                | TokenType::Null
-                | TokenType::IntegerLiteral
-                | TokenType::FloatLiteral
-                | TokenType::StringLiteral
-                | TokenType::CharLiteral => {
-                    let value = self.parse_value(token)?;
-                    object_map.insert(field_name, value);
-                    field_name = String::new();
-                }
-                TokenType::Identifier => {
-                    if self
-                        .lexer
-                        .previous_token()
-                        .is_some_and(|t| t.get_type() == TokenType::Colon)
-                    {
-                        object_map.insert(field_name, SonValue::Enum(token.get_source()));
-                        field_name = String::new();
-                    } else {
-                        field_name = token.get_source()
-                    }
-                }
-                TokenType::Error => {}
+
+                // Unexpected tokens
+                TokenType::Error => return Err(ParseError::ErrorToken(token)),
+                TokenType::EOF => return Err(ParseError::UnexpectedEOF),
                 _ => {
-                    return Err(ParseError::UnexpectedToken {
-                        expected: vec![
-                            TokenType::True,
-                            TokenType::False,
-                            TokenType::Null,
-                            TokenType::IntegerLiteral,
-                            TokenType::FloatLiteral,
-                            TokenType::StringLiteral,
-                            TokenType::CharLiteral,
-                            TokenType::Identifier,
-                        ],
+                    return Err(UnexpectedToken {
+                        expected: expected_tokens,
                         found: token,
-                        message: "".to_string(),
+                        message: String::new(),
                     });
                 }
             }
         }
 
-        return Ok(SonValue::Object(object_map));
+        return Ok(Value::Object(object_map));
     }
 
-    fn parse_array(&mut self) -> Result<SonValue, ParseError> {
-        let mut value_array: Vec<SonValue> = Vec::new();
+    fn parse_array(&mut self) -> Result<Value, ParseError> {
+        let expected_tokens: &'static [TokenType] = &[
+            TokenType::LeftBrace,
+            TokenType::LeftBracket,
+            TokenType::RightBracket,
+            TokenType::Colon,
+        ];
+        let mut value_array: Vec<Value> = Vec::new();
         while let Some(token) = self.lexer.next() {
             match token.get_type() {
-                TokenType::LeftParen => {}
-                TokenType::RightParen => {}
-                TokenType::LeftBrace => {
-                    let object = self.parse_object()?;
-                    value_array.push(object);
-                }
-                TokenType::RightBrace => {}
-                TokenType::LeftBracket => {
-                    let array = self.parse_array()?;
-                    value_array.push(array);
-                }
+                // Expected tokens
+                TokenType::Colon => value_array.push(self.parse_value()?),
+                TokenType::LeftBrace => value_array.push(self.parse_object()?),
+                TokenType::LeftBracket => value_array.push(self.parse_array()?),
                 TokenType::RightBracket => break,
                 TokenType::Comma => {}
-                TokenType::Dot => {}
-                TokenType::Colon => {}
-                TokenType::Negative => {}
-                TokenType::True
-                | TokenType::False
-                | TokenType::Null
-                | TokenType::IntegerLiteral
-                | TokenType::FloatLiteral
-                | TokenType::StringLiteral
-                | TokenType::CharLiteral => {
-                    let value = self.parse_value(token)?;
-                    value_array.push(value);
+
+                // Unexpected tokens
+                TokenType::Error => return Err(ParseError::ErrorToken(token.clone())),
+                TokenType::EOF => return Err(ParseError::UnexpectedEOF),
+                _ => {
+                    return Err(UnexpectedToken {
+                        expected: expected_tokens,
+                        found: token,
+                        message: String::new(),
+                    });
                 }
-                TokenType::Identifier => {}
-                TokenType::Error => {}
-                TokenType::EOF => {}
             }
         }
 
-        return Ok(SonValue::Array(value_array));
+        return Ok(Value::Array(value_array));
     }
 }
