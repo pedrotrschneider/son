@@ -37,4 +37,6 @@ struct Client {
 fn test() {
     let result = son::from_file::<Value>("src/test.son");
     assert!(result.is_ok(), "{}", result.err().unwrap());
+    println!("{}", result.unwrap().to_string());
+    assert!(false);
 }

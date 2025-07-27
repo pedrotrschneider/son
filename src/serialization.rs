@@ -244,7 +244,7 @@ impl SonPrinter {
                 string.push('}');
             }
         };
-        string.push_str(",\n");
+        string.push('\n');
         return string;
     }
 }
