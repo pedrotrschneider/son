@@ -1,8 +1,5 @@
 use crate::Value;
-use std::fmt::{
-    Display,
-    Formatter,
-};
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenType {
@@ -77,8 +74,11 @@ impl Token {
                 self.source
                     .strip_prefix('"')
                     .and_then(|s| s.strip_suffix('"'))
-                    .unwrap()
-                    .to_owned(),
+                    // Handling escape sequences
+                    .map(|s| s.replace("\\\"", "\"")) // Use map here
+                    .map(|s| s.replace("\\n", "\n")) // Use map here
+                    .map(|s| s.replace("\\t", "\t")) // Use map here
+                    .unwrap(),
             )),
             TokenType::CharLiteral => Some(Value::Char(self.source.chars().nth(1).unwrap())),
             _ => None,
@@ -101,11 +101,7 @@ impl Display for Token {
             TokenType::CharLiteral => {
                 write!(f, "[{}:{}] Char: {}", self.line, self.col, self.source)
             }
-            TokenType::Identifier => write!(
-                f,
-                "[{}:{}] Identifier: {}",
-                self.line, self.col, self.source
-            ),
+            TokenType::Identifier => write!(f, "[{}:{}] Identifier: {}", self.line, self.col, self.source),
             TokenType::Error => write!(f, "[Error] [{}:{}] {}", self.line, self.col, self.source),
             _ => write!(f, "[{}:{}] {:?}", self.line, self.col, self.token_type),
         };

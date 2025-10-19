@@ -1,0 +1,8 @@
+{
+    empty_string: ""
+    with_spaces: "hello world"
+    with_quotes: "He said \"hello\""
+    with_newline: "line1\nline2"
+    with_tab: "tab\there"
+    unicode: "Hello 世界 🌍"
+}

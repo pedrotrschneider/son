@@ -1,0 +1,11 @@
+{
+    string_field: "Hello World",
+    char_field: 'A',
+    bool_true: true,
+    bool_false: false,
+    int_positive: 42,
+    int_negative: -100,
+    int_zero: 0,
+    float_value: 3.14,
+    float_negative: -2.5
+}

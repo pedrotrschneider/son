@@ -1,0 +1,8 @@
+{
+    compact:{name:"Alice",age:30}
+    spaced:   {   name:   "Bob"   age:   25   }
+    tabbed:		{
+		name:	"Charlie"
+		age:	35
+	}
+}

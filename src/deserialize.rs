@@ -1,7 +1,4 @@
-use crate::{
-    error::DeserializationError,
-    value::Value,
-};
+use crate::{error::DeserializationError, value::Value};
 use std::collections::HashMap;
 
 pub trait Deserialize: FromSon {}

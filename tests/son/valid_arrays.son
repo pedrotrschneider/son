@@ -1,0 +1,6 @@
+{
+    numbers: [1, 2, 3, 4, 5]
+    strings: ["hello", "world", "test"]
+    booleans: [true, false, true]
+    mixed_commas: [1 2 3, 4, 5]
+}

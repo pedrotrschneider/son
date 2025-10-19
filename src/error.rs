@@ -1,11 +1,5 @@
-use crate::token::{
-    Token,
-    TokenType,
-};
-use std::fmt::{
-    Display,
-    Formatter,
-};
+use crate::token::{Token, TokenType};
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug)]
 pub enum DeserializationError {
@@ -38,7 +32,7 @@ impl Display for DeserializationError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ParseStep {
     Start,
     Value,

@@ -1,0 +1,8 @@
+{
+    max_i64: 9223372036854775807
+    min_i64: -9223372036854775808
+    zero: 0
+    negative_zero: -0
+    large_float: 123456.789012
+    small_float: 0.000001
+}

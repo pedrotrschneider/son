@@ -9,29 +9,13 @@ pub mod util;
 pub mod value;
 
 pub use crate::{
-    deserialize::{
-        Deserialize,
-        FromSon,
-    },
-    error::{
-        DeserializationError,
-        Error,
-        ParseError,
-    },
-    serialize::{
-        Serialize,
-        ToSon,
-    },
+    deserialize::{Deserialize, FromSon},
+    error::{DeserializationError, Error, ParseError},
+    serialize::{Serialize, ToSon},
     value::Value,
 };
-use crate::{
-    parser::SonParser,
-    printer::Printer,
-};
-pub use son_macros::{
-    Deserialize,
-    Serialize,
-};
+use crate::{parser::SonParser, printer::Printer};
+pub use son_macros::{Deserialize, Serialize};
 use std::fs::File;
 
 pub fn from_file<T>(file_path: &str) -> Result<T, Error>

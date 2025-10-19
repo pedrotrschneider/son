@@ -1,17 +1,10 @@
 use crate::{
-    token::{
-        Token,
-        TokenType,
-    },
+    token::{Token, TokenType},
     util,
 };
 use std::{
     collections::VecDeque,
-    io::{
-        BufRead,
-        BufReader,
-        Read,
-    },
+    io::{BufRead, BufReader, Read},
 };
 
 struct Keywords {}
@@ -190,17 +183,39 @@ where
         return None;
     }
 
+    fn advance_multiple(&mut self, mut count: u64) -> Option<char> {
+        while count >= 2 {
+            self.advance();
+            count -= 1;
+        }
+        return self.advance();
+    }
+
     fn advance_line(&mut self) {
         self.line += 1;
         self.col = 0;
         self.advance();
     }
 
-    fn skip_comment(&mut self) {
+    fn skip_comment_inline(&mut self) {
         while self.peek().is_some_and(|c| c != '\n') {
             self.advance();
         }
-        self.advance(); // Skip final new line of the comment
+    }
+
+    fn skip_comment_block(&mut self) {
+        let mut found_star = false;
+        while self.peek().is_some() {
+            let next = self.advance();
+            found_star = next.is_some_and(|c| c == '*') || found_star;
+            if next.is_some_and(|c| c == '/') {
+                if found_star {
+                    break;
+                } else {
+                    found_star = false;
+                }
+            }
+        }
     }
 
     fn skip_whitespace(&mut self) {
@@ -208,7 +223,8 @@ where
             match c {
                 ' ' | '\r' | '\t' => util::discard(self.advance()),
                 '\n' => self.advance_line(),
-                '/' if self.peek_next() == Some('/') => self.skip_comment(),
+                '/' if self.peek_next() == Some('/') => self.skip_comment_inline(),
+                '/' if self.peek_next() == Some('*') => self.skip_comment_block(),
                 _ => break,
             }
         }
@@ -233,6 +249,7 @@ where
             match c {
                 '\n' => self.advance_line(),
                 '"' => break,
+                '\\' => util::discard(self.advance_multiple(2)),
                 _ => util::discard(self.advance()),
             }
         }
@@ -244,9 +261,11 @@ where
     }
 
     fn consume_char_literal(&mut self) -> Token {
-        // Advance until the end of the char literal
-        while self.peek().is_some_and(|c| c != '\'') {
-            self.advance();
+        // Advance one char handling escaping sequences
+        if let Some(char) = self.advance() {
+            if char == '\\' {
+                self.advance();
+            }
         }
         // Validate closing quote
         if !self.match_token('\'') {

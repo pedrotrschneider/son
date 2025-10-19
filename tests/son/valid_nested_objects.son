@@ -1,0 +1,14 @@
+{
+    user: {
+        name: "Bob"
+        age: 25
+    }
+    settings: {
+        theme: "dark",
+        notifications: true,
+        privacy: {
+            public: false
+            friends_only: true
+        }
+    }
+}

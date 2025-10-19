@@ -1,17 +1,11 @@
 use crate::{
     ParseError::UnexpectedToken,
-    error::{
-        ParseError,
-        ParseStep,
-    },
+    error::{ParseError, ParseStep},
     lexer::SonLexer,
     token::TokenType,
     value::Value,
 };
-use std::{
-    collections::HashMap,
-    io::Read,
-};
+use std::{collections::HashMap, io::Read};
 
 pub struct SonParser<T>
 where
@@ -122,13 +116,9 @@ where
                 // Expected tokens
                 TokenType::Identifier => field_name = token.get_source(),
                 TokenType::Colon => try_insert(&mut field_name, self.parse_value()?, token)?,
-                TokenType::LeftCurlyBrace => {
-                    try_insert(&mut field_name, self.parse_object()?, token)?
-                }
-                TokenType::RightCurlyBrace => break,
-                TokenType::LeftSquareBrace => {
-                    try_insert(&mut field_name, self.parse_array()?, token)?
-                }
+                TokenType::LeftCurlyBrace => try_insert(&mut field_name, self.parse_object()?, token)?,
+                TokenType::RightCurlyBrace => return Ok(Value::Object(object_map)),
+                TokenType::LeftSquareBrace => try_insert(&mut field_name, self.parse_array()?, token)?,
                 TokenType::Comma => {}
 
                 // Unexpected tokens
@@ -144,7 +134,7 @@ where
                 }
             }
         }
-        return Ok(Value::Object(object_map));
+        return Err(ParseError::UnexpectedEOF(ParseStep::Object));
     }
 
     fn parse_array(&mut self) -> Result<Value, ParseError> {

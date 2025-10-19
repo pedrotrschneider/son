@@ -1,0 +1,30 @@
+{
+    company: "TechCorp"
+    employees: [
+        {
+            id: 1
+            name: "Alice"
+            department: {
+                name: "Engineering"
+                floor: 3
+            }
+            skills: ["Rust", "Python", "Go"]
+            active: true
+        }
+        {
+            id: 2
+            name: "Bob"
+            department: {
+                name: "Sales"
+                floor: 1
+            }
+            skills: ["Communication", "Negotiation"]
+            active: false
+        }
+    ]
+    metadata: {
+        created: "2024-01-01"
+        version: 2
+        tags: ["production", "stable"]
+    }
+}

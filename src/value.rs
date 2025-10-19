@@ -1,20 +1,10 @@
-use crate::{
-    DeserializationError,
-    Deserialize,
-    FromSon,
-    Printer,
-    Serialize,
-    ToSon,
-};
+use crate::{DeserializationError, Deserialize, FromSon, Printer, Serialize, ToSon};
 use std::{
     collections::HashMap,
-    fmt::{
-        Display,
-        Formatter,
-    },
+    fmt::{Display, Formatter},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Null,
     Bool(bool),
