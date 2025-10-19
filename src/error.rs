@@ -1,5 +1,11 @@
-use crate::token::{Token, TokenType};
-use std::fmt::{Display, Formatter};
+use crate::token::{
+    Token,
+    TokenType,
+};
+use std::fmt::{
+    Display,
+    Formatter,
+};
 
 #[derive(Debug)]
 pub enum DeserializationError {
@@ -33,42 +39,70 @@ impl Display for DeserializationError {
 }
 
 #[derive(Debug)]
+pub enum ParseStep {
+    Start,
+    Value,
+    Array,
+    Object,
+}
+
+impl Display for ParseStep {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return match self {
+            ParseStep::Start => write!(f, ""),
+            ParseStep::Value => write!(f, "[Parse Value]"),
+            ParseStep::Array => write!(f, "[Parse Array]"),
+            ParseStep::Object => write!(f, "[Parse Object]"),
+        };
+    }
+}
+
+#[derive(Debug)]
 pub enum ParseError {
-    IOError(std::io::Error),
+    IOError(ParseStep, std::io::Error),
     UnexpectedToken {
+        step: ParseStep,
         expected: &'static [TokenType],
         found: Token,
         message: String,
     },
     UnexpectedIdentifier {
+        step: ParseStep,
         expected: String,
         found: String,
         message: String,
     },
-    UnexpectedEOF,
-    ErrorToken(Token),
+    UnexpectedEOF(ParseStep),
+    ErrorToken(ParseStep, Token),
 }
 
 impl Display for ParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         return match self {
-            ParseError::IOError(e) => write!(f, "{}", e),
+            ParseError::IOError(step, e) => write!(f, "{step} {e}"),
 
             ParseError::UnexpectedToken {
+                step,
                 expected,
                 found,
                 message,
             } => {
-                write!(f, "Unexpected token: expected one of {:?}, got: \n{}", expected, found)?;
+                write!(
+                    f,
+                    "{} Unexpected token: expected one of {:?}, got: \n{}",
+                    step, expected, found
+                )?;
                 if !message.is_empty() {
                     write!(f, ".")
                 } else {
-                    write!(f, ". \n{}", message)
+                    write!(f, ". \n{message}")
                 }
             }
-            ParseError::UnexpectedIdentifier { .. } => write!(f, "Unexpected identifier"),
-            ParseError::UnexpectedEOF => write!(f, "Unexpected End of File"),
-            ParseError::ErrorToken(t) => write!(f, "Error at: {}", t),
+            ParseError::UnexpectedIdentifier { step, .. } => {
+                write!(f, "{step} Unexpected identifier")
+            }
+            ParseError::UnexpectedEOF(step) => write!(f, "{step} Unexpected End of File"),
+            ParseError::ErrorToken(step, t) => write!(f, "{step} Error at: {t}"),
         };
     }
 }

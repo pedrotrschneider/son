@@ -1,14 +1,17 @@
 use crate::Value;
-use std::fmt::{Display, Formatter};
+use std::fmt::{
+    Display,
+    Formatter,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenType {
     LeftParen,
     RightParen,
-    LeftBrace,
-    RightBrace,
-    LeftBracket,
-    RightBracket,
+    LeftCurlyBrace,
+    RightCurlyBrace,
+    LeftSquareBrace,
+    RightSquareBrace,
     Comma,
     Dot,
     Colon,
@@ -86,11 +89,23 @@ impl Token {
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         return match self.token_type {
-            TokenType::IntegerLiteral => write!(f, "[{}:{}] Float: {}", self.line, self.col, self.source),
-            TokenType::FloatLiteral => write!(f, "[{}:{}] Integer: {}", self.line, self.col, self.source),
-            TokenType::StringLiteral => write!(f, "[{}:{}] String: {}", self.line, self.col, self.source),
-            TokenType::CharLiteral => write!(f, "[{}:{}] Char: {}", self.line, self.col, self.source),
-            TokenType::Identifier => write!(f, "[{}:{}] Identifier: {}", self.line, self.col, self.source),
+            TokenType::IntegerLiteral => {
+                write!(f, "[{}:{}] Float: {}", self.line, self.col, self.source)
+            }
+            TokenType::FloatLiteral => {
+                write!(f, "[{}:{}] Integer: {}", self.line, self.col, self.source)
+            }
+            TokenType::StringLiteral => {
+                write!(f, "[{}:{}] String: {}", self.line, self.col, self.source)
+            }
+            TokenType::CharLiteral => {
+                write!(f, "[{}:{}] Char: {}", self.line, self.col, self.source)
+            }
+            TokenType::Identifier => write!(
+                f,
+                "[{}:{}] Identifier: {}",
+                self.line, self.col, self.source
+            ),
             TokenType::Error => write!(f, "[Error] [{}:{}] {}", self.line, self.col, self.source),
             _ => write!(f, "[{}:{}] {:?}", self.line, self.col, self.token_type),
         };

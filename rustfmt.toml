@@ -3,4 +3,3 @@ format_code_in_doc_comments = true
 imports_granularity = "Crate"
 imports_layout = "Vertical"
 wrap_comments = true
-max_wdith = 120

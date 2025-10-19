@@ -1,7 +1,18 @@
-use crate::token::{Token, TokenType};
-use crate::util;
-use std::collections::VecDeque;
-use std::io::{BufRead, BufReader, Read};
+use crate::{
+    token::{
+        Token,
+        TokenType,
+    },
+    util,
+};
+use std::{
+    collections::VecDeque,
+    io::{
+        BufRead,
+        BufReader,
+        Read,
+    },
+};
 
 struct Keywords {}
 impl Keywords {
@@ -63,10 +74,10 @@ where
         let token = match c {
             '(' => self.new_token(TokenType::LeftParen),
             ')' => self.new_token(TokenType::RightParen),
-            '{' => self.new_token(TokenType::LeftBrace),
-            '}' => self.new_token(TokenType::RightBrace),
-            '[' => self.new_token(TokenType::LeftBracket),
-            ']' => self.new_token(TokenType::RightBracket),
+            '{' => self.new_token(TokenType::LeftCurlyBrace),
+            '}' => self.new_token(TokenType::RightCurlyBrace),
+            '[' => self.new_token(TokenType::LeftSquareBrace),
+            ']' => self.new_token(TokenType::RightSquareBrace),
             ',' => self.new_token(TokenType::Comma),
             '.' => self.new_token(TokenType::Dot),
             ':' => self.new_token(TokenType::Colon),
@@ -82,6 +93,10 @@ where
         self.current_token = Some(token.clone());
 
         return token;
+    }
+
+    pub fn current(&self) -> Option<Token> {
+        return self.current_token.clone();
     }
 }
 
@@ -274,7 +289,7 @@ where
 
     fn consume_identifier(&mut self) -> Token {
         // Consume all characters available for the identifier.
-        while self.peek().is_some_and(|c| c.is_alphabetic() || c == '_') {
+        while self.peek().is_some_and(|c| c.is_alphanumeric() || c == '_') {
             self.advance();
         }
 

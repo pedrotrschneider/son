@@ -1,5 +1,7 @@
-use crate::error::DeserializationError;
-use crate::value::Value;
+use crate::{
+    error::DeserializationError,
+    value::Value,
+};
 use std::collections::HashMap;
 
 pub trait Deserialize: FromSon {}
@@ -196,11 +198,14 @@ impl FromSon for f64 {
 
 // Vector
 
-impl Deserialize for Vec<Value> {}
-impl FromSon for Vec<Value> {
+impl<T> Deserialize for Vec<T> where T: Deserialize {}
+impl<T> FromSon for Vec<T>
+where
+    T: Deserialize,
+{
     fn from_son(son: Value) -> Result<Self, DeserializationError> {
         match son {
-            Value::Array(a) => Ok(a.clone()),
+            Value::Array(a) => Ok(a.iter().map(|v| T::from_son(v.clone()).unwrap()).collect()),
             _ => Err(default_error(Value::Array(Vec::new()), son)),
         }
     }

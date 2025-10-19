@@ -1,6 +1,18 @@
-use crate::{DeserializationError, Deserialize, FromSon, Printer, Serialize, ToSon};
-use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
+use crate::{
+    DeserializationError,
+    Deserialize,
+    FromSon,
+    Printer,
+    Serialize,
+    ToSon,
+};
+use std::{
+    collections::HashMap,
+    fmt::{
+        Display,
+        Formatter,
+    },
+};
 
 #[derive(Debug, Clone)]
 pub enum Value {
